@@ -144,7 +144,7 @@
 #define RXB1D7		0x7D
 /*@}*/
 
-// A couple more take from can-lib source
+// A couple more taken from can-lib source
 #define MCP2515_FILTER_EXTENDED(id)	\
     (uint8_t)  ((uint32_t) (id) >> 21), \
     (uint8_t)((((uint32_t) (id) >> 13) & 0xe0) | (1<<3) | \
