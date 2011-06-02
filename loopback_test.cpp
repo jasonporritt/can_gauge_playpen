@@ -48,8 +48,18 @@ void setup() {
     Serial.println("Can't init CAN");
   } 
 
+  Canbus.set_all_filters_open();
+
+  serial_print_register(RXM0);
+  serial_print_register(RXM1);
+  serial_print_register(RXB0CTRL);
+  serial_print_register(RXB1CTRL);
+
   Canbus.set_loopback_mode();
+
+  delay(100);
 }
+
 
  
 tCAN message;
@@ -58,7 +68,7 @@ void loop() {
   uint8_t data[8] = { 0x20, 0x00, 0x11, 0x19, 0xaf, 0x00, 0x00, 0xf0 };
   Canbus.message_tx(0x28f, data);
 
-  delay(1);
+  delay(5);
 
 	if (mcp2515_check_message()) {
     Serial.println("There are messages");

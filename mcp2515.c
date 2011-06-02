@@ -218,7 +218,7 @@ void mcp2515_static_filter(const uint8_t *filter)
 		SET(MCP2515_CS);
 	}
 	
-	mcp2515_bit_modify(CANCTRL, 0xe0, 0);
+  mcp2515_bit_modify(CANCTRL, (1<<REQOP2)|(1<<REQOP1)|(1<<REQOP0), 0);
 }
 // -----------------------------------------
 // END stuff taken from can-lib source

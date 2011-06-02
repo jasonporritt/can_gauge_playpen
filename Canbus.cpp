@@ -17,6 +17,24 @@
 #include "Canbus.h"
 
 
+// Default filter -- all open
+prog_uint8_t all_open_filters[] = 
+{
+	// Group 0
+	MCP2515_FILTER(0),				// Filter 0
+	MCP2515_FILTER(0),				// Filter 1
+	
+	// Group 1
+	MCP2515_FILTER_EXTENDED(0),		// Filter 2
+	MCP2515_FILTER_EXTENDED(0),		// Filter 3
+	MCP2515_FILTER_EXTENDED(0),		// Filter 4
+	MCP2515_FILTER_EXTENDED(0),		// Filter 5
+	
+	MCP2515_FILTER(0),				// Mask 0 (for group 0)
+	MCP2515_FILTER_EXTENDED(0),		// Mask 1 (for group 1)
+};
+
+
 
 
 /* C++ wrapper */
@@ -38,6 +56,10 @@ void CanbusClass::set_loopback_mode(void) {
 //
 void CanbusClass::set_standard_mode(void) {
   mcp2515_bit_modify(CANCTRL, (1<<REQOP2)|(1<<REQOP1)|(1<<REQOP0), 0);
+}
+
+void CanbusClass::set_all_filters_open(void) {
+  mcp2515_static_filter(all_open_filters);
 }
 
 //
