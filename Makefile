@@ -1,6 +1,6 @@
 ARDUINO_DIR = /Applications/Arduino.app/Contents/Resources/Java
 
-TARGET 								= loopback_test
+TARGET 								= gauge_1
 MCU    								= atmega328p
 F_CPU  								= 16000000
 ARDUINO_PORT 					= /dev/tty.usbmodemfd131

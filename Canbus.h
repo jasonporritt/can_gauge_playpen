@@ -41,8 +41,11 @@ class CanbusClass
 
   void set_loopback_mode(void);
   void set_standard_mode(void);
+  void set_configuration_mode(void);
 
   void set_all_filters_open(void);
+  void set_gauge_filter(void);
+  void turn_on_filters(void);
 
   private:
 	

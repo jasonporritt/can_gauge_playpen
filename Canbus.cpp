@@ -15,10 +15,28 @@
 #include "mcp2515.h"
 #include "defaults.h"
 #include "Canbus.h"
+#include <watch.h>
+
+// Filter set based on watch.h indicated message
+const prog_uint8_t gauge_filter[] PROGMEM = 
+{
+	// Group 0
+	MCP2515_FILTER(MESSAGE_WHEEL_SPEED),				// Filter 0
+	MCP2515_FILTER(MESSAGE_TEMPS),      				// Filter 1
+	
+	// Group 1
+	MCP2515_FILTER(MESSAGE_FLUID_LEVELS),		// Filter 2
+	MCP2515_FILTER(0xffff),		// Filter 3
+	MCP2515_FILTER(0xffff),		// Filter 4
+	MCP2515_FILTER(0xffff),		// Filter 5
+	
+	MCP2515_FILTER(0x0fff),				// Mask 0 (for group 0)
+	MCP2515_FILTER(0x0fff),		// Mask 1 (for group 1)
+};
 
 
 // Default filter -- all open
-prog_uint8_t all_open_filters[] = 
+const prog_uint8_t all_open_filters[] PROGMEM = 
 {
 	// Group 0
 	MCP2515_FILTER(0),				// Filter 0
@@ -34,13 +52,8 @@ prog_uint8_t all_open_filters[] =
 	MCP2515_FILTER_EXTENDED(0),		// Mask 1 (for group 1)
 };
 
-
-
-
 /* C++ wrapper */
 CanbusClass::CanbusClass() {
-
- 
 }
 
 //
@@ -48,6 +61,12 @@ CanbusClass::CanbusClass() {
 //
 void CanbusClass::set_loopback_mode(void) {
   mcp2515_bit_modify(CANCTRL, (1<<REQOP2)|(1<<REQOP1)|(1<<REQOP0), 0x40);
+}
+
+void CanbusClass::set_configuration_mode(void) {
+	mcp2515_bit_modify(CANCTRL, (1<<REQOP2)|(1<<REQOP1)|(1<<REQOP0), (1<<REQOP2));
+	while ((mcp2515_read_register(CANSTAT) & 0xe0) != (1<<REQOP2))
+		;
 }
 
 //
@@ -58,8 +77,17 @@ void CanbusClass::set_standard_mode(void) {
   mcp2515_bit_modify(CANCTRL, (1<<REQOP2)|(1<<REQOP1)|(1<<REQOP0), 0);
 }
 
+void CanbusClass::turn_on_filters(void) {
+	mcp2515_write_register(RXB0CTRL, (1<<BUKT));
+	mcp2515_write_register(RXB1CTRL, 0);
+}
+
 void CanbusClass::set_all_filters_open(void) {
   mcp2515_static_filter(all_open_filters);
+}
+
+void CanbusClass::set_gauge_filter(void) {
+  mcp2515_static_filter(gauge_filter);
 }
 
 //

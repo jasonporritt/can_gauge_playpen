@@ -1,0 +1,18 @@
+CAN bus notes
+---------------------
+
+Ford/Mazda likely to have diagnostic response message ID equal to request message ID + 8
+    http://www.canbushack.com/blog/index.php/2010/08/02/oh-no-odometer-reading-and-righting-er-writing#comments
+
+EVERY vehicle sold in the US will support some ecus in the $7E0~$7E7 range... but you can simply ping $7DF to find all of them as this is their functional address in which all will respond to a tester present (and some other services).
+
+
+From watching the data change, I have been able to decode some of the fields. ID 201, for instance, contains RPM in the first two bytes, speed in bytes 5 & 6, and accelerator position in byte 7. ID 215 has throttle position in byte 7. Engine coolant temperature is in 240, byte 2. It also seems to be in 420, byte 5. Fuel level is in 430, byte 1. There are two fields that increment when the car is moving and roll over at FF (odometer like). They are 420, B2 and 4C0, B1. 4B0 and 4B1 contain the speed of each wheel (two bytes per wheel). In 4B0 it is offset by 10000.
+That's all I have been able to figure out so far. I haven't tried to transmit anything yet, because I don't have any idea what to send. I'm sure there are some diagnostic commands that can be sent to get additional data. I look forward to hearing from anyone else who has tried this.
+    http://forum.mazda6club.com/mazda6-atenza/123182-decoding-can-bus.html
+
+
+
+
+Correctly mapped CAN messages: see
+  https://spreadsheets.google.com/spreadsheet/ccc?hl=en_US&key=tdOR6Zdj9056NzYMyxnXTmQ&hl=en_US#gid=0
