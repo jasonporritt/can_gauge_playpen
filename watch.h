@@ -1,6 +1,6 @@
-
 #define MESSAGE_WHEEL_SPEED   0x4b0
+#define MESSAGE_ENGINE_PARAMS 0x200
 #define MESSAGE_ENGINE        0x201
-#define MESSAGE_TEMPS         0x240
+#define MESSAGE_TEMPS         0x420
 #define MESSAGE_FLUID_LEVELS  0x430
 #define MESSAGE_BRAKES        0x20f

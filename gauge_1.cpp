@@ -39,10 +39,14 @@ tCAN last_fluids_message;
 tCAN last_temps_message;
 tCAN last_engine_message;
 tCAN last_brakes_message;
+tCAN last_engine_params_message;
 void storeMessage(void) {
   tCAN message;
   if (Canbus.full_message_rx(&message)) {
     switch (message.id) {
+      case MESSAGE_ENGINE_PARAMS:
+        last_engine_params_message = message;
+        break;
       case MESSAGE_WHEEL_SPEED:
         last_wheel_speed_message = message;
         break;
@@ -97,25 +101,29 @@ void setup() {
 
 volatile int toggle = 0;
 void simulate(void) {
-  if (toggle % 5 == 0) {
+  if (toggle % 6 == 0) {
     uint8_t data[8] = { 0x47, 0x10, 0x47, 0x10, 0x47, 0x10, 0x47, 0x10 };
     Canbus.message_tx(MESSAGE_WHEEL_SPEED, data);
   }
-  else if (toggle % 5 == 1) {
+  else if (toggle % 6 == 1) {
     uint8_t data[8] = { 0x20, 0x00, 0x9, 0x00, 0x30, 0xf1, 0x1, 0x2 };
     Canbus.message_tx(MESSAGE_TEMPS, data);
   }
-  else if (toggle % 5 == 2) {
+  else if (toggle % 6 == 2) {
     uint8_t data[8] = { 0x20, 0x00, 0x9, 0x00, 0x30, 0xf1, 0x1, 0x2 };
     Canbus.message_tx(MESSAGE_FLUID_LEVELS, data);
   }
-  else if (toggle % 5 == 3) {
+  else if (toggle % 6 == 3) {
     uint8_t data[8] = { 0x10, 0x40, 0x9, 0x00, 0x27, 0x10, 0x1, 0x2 };
     Canbus.message_tx(MESSAGE_ENGINE, data);
   }
-  else if (toggle % 5 == 4) {
+  else if (toggle % 6 == 4) {
     uint8_t data[8] = { 0x10, 0x75, 0x30, 0x00, 0x27, 0x10, 0x1, 0x2 };
     Canbus.message_tx(MESSAGE_BRAKES, data);
+  }
+  else if (toggle % 6 == 5) {
+    uint8_t data[8] = { 0x27, 0x01, 0x27, 0x22, 0x26, 0xef, 0x80, 0x72 };
+    Canbus.message_tx(MESSAGE_ENGINE_PARAMS, data);
   }
   toggle++;
   delay(1);
@@ -125,32 +133,46 @@ int counter = 0;
 void loop() {
   
   // simulate();
-
-  if (last_wheel_speed_message.id > 0) {
-    float lf_speed = ((((last_wheel_speed_message.data[0] << 0x08) + last_wheel_speed_message.data[1]) - 10000) / 100.0) * 0.62137;
-    float rf_speed = ((((last_wheel_speed_message.data[2] << 0x08) + last_wheel_speed_message.data[3]) - 10000) / 100.0) * 0.62137;
-    float lr_speed = ((((last_wheel_speed_message.data[4] << 0x08) + last_wheel_speed_message.data[5]) - 10000) / 100.0) * 0.62137;
-    float rr_speed = ((((last_wheel_speed_message.data[6] << 0x08) + last_wheel_speed_message.data[7]) - 10000) / 100.0) * 0.62137;
-    char wheel_speed_message[20];
-    sprintf(wheel_speed_message, "%2d %2d %2d %2d", (int)lf_speed, (int)rf_speed, (int)lr_speed, (int)rr_speed);
+  
+  if (last_engine_params_message.id > 0) {
+    int maf  = ((last_engine_params_message.data[0] << 0x8) + last_engine_params_message.data[1]) - 10000;
+    int map1 = ((last_engine_params_message.data[2] << 0x8) + last_engine_params_message.data[3]) - 10000;
+    int map2 = ((last_engine_params_message.data[4] << 0x8) + last_engine_params_message.data[5]) - 10000;
+    int steering_angle = ((((last_engine_params_message.data[6] << 0x8) + last_engine_params_message.data[7]) - 32767) - 1) / 10;
+    char engine_params_message[16];
+    sprintf(engine_params_message, "F:%+04d 1:%+04d 2:%+04d", maf, map1, map2); 
+    set_cursor(0,2);
+    sLCD.print(engine_params_message);
+    char steering_message[12];
+    sprintf(steering_message, "St: %+3d", steering_angle);
     set_cursor(0,3);
-    sLCD.print(wheel_speed_message);
+    sLCD.print(steering_message);
   }
+
+  // if (last_wheel_speed_message.id > 0) {
+  //   float lf_speed = ((((last_wheel_speed_message.data[0] << 0x08) + last_wheel_speed_message.data[1]) - 10000) / 100.0) * 0.62137;
+  //   float rf_speed = ((((last_wheel_speed_message.data[2] << 0x08) + last_wheel_speed_message.data[3]) - 10000) / 100.0) * 0.62137;
+  //   float lr_speed = ((((last_wheel_speed_message.data[4] << 0x08) + last_wheel_speed_message.data[5]) - 10000) / 100.0) * 0.62137;
+  //   float rr_speed = ((((last_wheel_speed_message.data[6] << 0x08) + last_wheel_speed_message.data[7]) - 10000) / 100.0) * 0.62137;
+  //   char wheel_speed_message[20];
+  //   sprintf(wheel_speed_message, "%2d %2d %2d %2d", (int)lf_speed, (int)rf_speed, (int)lr_speed, (int)rr_speed);
+  //   set_cursor(0,3);
+  //   sLCD.print(wheel_speed_message);
+  // }
+
+  // if (last_fluids_message.id > 0) {
+  //   char fluid_levels_message[20];
+  //   sprintf(fluid_levels_message, "Fluids: 0x%02x 0x%02x", last_fluids_message.data[0], last_fluids_message.data[1]);
+  //   set_cursor(0,2);
+  //   sLCD.print(fluid_levels_message);
+  // }
 
   if (last_temps_message.id > 0) {
-    float coolant_temp = (last_temps_message.data[0] - 40 + 32) * (9/5);
-    float ambient_temp = (last_temps_message.data[4] - 40 + 32) * (9/5);
+    float ambient_temp = (last_temps_message.data[0] - 40 + 32) * (9/5);
     char temps_message[9];
-    sprintf(temps_message, "%3d,%2d", (int)coolant_temp, (int)ambient_temp);
-    set_cursor(14,3);
+    sprintf(temps_message, "%3dF", (int)ambient_temp);
+    set_cursor(17,3);
     sLCD.print(temps_message);
-  }
-
-  if (last_fluids_message.id > 0) {
-    char fluid_levels_message[20];
-    sprintf(fluid_levels_message, "Fluids: 0x%02x 0x%02x", last_fluids_message.data[0], last_fluids_message.data[1]);
-    set_cursor(0,2);
-    sLCD.print(fluid_levels_message);
   }
 
   if (last_brakes_message.id > 0) {
