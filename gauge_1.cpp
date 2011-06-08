@@ -13,6 +13,7 @@ v1.0 28-03-10
 #include <Canbus.h>
 #include <NewSoftSerial.h>
 #include <watch.h>
+#include "defaults.h"
 
 int LED2 = 8;
 int LED3 = 7;
@@ -33,6 +34,35 @@ void set_cursor(int xpos, int ypos){
   sLCD.print(row_start[ypos] + xpos + 128, BYTE);               
 } 
 
+tCAN last_wheel_speed_message;
+tCAN last_fluids_message;
+tCAN last_temps_message;
+tCAN last_engine_message;
+tCAN last_brakes_message;
+void storeMessage(void) {
+  tCAN message;
+  if (Canbus.full_message_rx(&message)) {
+    switch (message.id) {
+      case MESSAGE_WHEEL_SPEED:
+        last_wheel_speed_message = message;
+        break;
+      case MESSAGE_FLUID_LEVELS:
+        last_fluids_message = message;
+        break;
+      case MESSAGE_TEMPS:
+        last_temps_message = message;
+        break;
+      case MESSAGE_ENGINE:
+        last_engine_message = message;
+        break;
+      case MESSAGE_BRAKES:
+        last_brakes_message = message;
+        break;
+    }
+  }
+	SET(MCP2515_INT);
+}
+
 void setup() {
   
   pinMode(LED2, OUTPUT); 
@@ -48,13 +78,15 @@ void setup() {
     Serial.println("CAN Init ok");
     clear_lcd();
     sLCD.print("CAN Init ok");
+    Canbus.set_gauge_filter();
   } else
   {
     Serial.println("Can't init CAN");
     sLCD.print("CAN init FAILED");
   } 
 
-  Canbus.set_gauge_filter();
+  attachInterrupt(0, storeMessage, LOW);
+
   // Canbus.set_loopback_mode();
  
   delay(1000);
@@ -63,19 +95,27 @@ void setup() {
 
 
 
-int toggle = 0;
+volatile int toggle = 0;
 void simulate(void) {
-  if (toggle % 3 == 0) {
+  if (toggle % 5 == 0) {
     uint8_t data[8] = { 0x47, 0x10, 0x47, 0x10, 0x47, 0x10, 0x47, 0x10 };
     Canbus.message_tx(MESSAGE_WHEEL_SPEED, data);
   }
-  else if (toggle % 3 == 1) {
+  else if (toggle % 5 == 1) {
     uint8_t data[8] = { 0x20, 0x00, 0x9, 0x00, 0x30, 0xf1, 0x1, 0x2 };
     Canbus.message_tx(MESSAGE_TEMPS, data);
   }
-  else if (toggle % 3 == 2) {
+  else if (toggle % 5 == 2) {
     uint8_t data[8] = { 0x20, 0x00, 0x9, 0x00, 0x30, 0xf1, 0x1, 0x2 };
     Canbus.message_tx(MESSAGE_FLUID_LEVELS, data);
+  }
+  else if (toggle % 5 == 3) {
+    uint8_t data[8] = { 0x10, 0x40, 0x9, 0x00, 0x27, 0x10, 0x1, 0x2 };
+    Canbus.message_tx(MESSAGE_ENGINE, data);
+  }
+  else if (toggle % 5 == 4) {
+    uint8_t data[8] = { 0x10, 0x75, 0x30, 0x00, 0x27, 0x10, 0x1, 0x2 };
+    Canbus.message_tx(MESSAGE_BRAKES, data);
   }
   toggle++;
   delay(1);
@@ -86,49 +126,54 @@ void loop() {
   
   // simulate();
 
-	if (mcp2515_check_message()) {
-    tCAN message;
-    if (Canbus.full_message_rx(&message)) {
-
-      Serial.println("Got a message");
-    
-      float lf_speed;
-      float rf_speed;
-      float lr_speed;
-      float rr_speed;
-      char wheel_speed_message[20];
-      float coolant_temp;
-      float ambient_temp;
-      char temps_message[9];
-      char fluid_levels_message[20];
-
-      switch (message.id) {
-        case MESSAGE_WHEEL_SPEED:
-          lf_speed = ((((message.data[0] << 0x08) + message.data[1]) - 10000) / 100.0) * 0.62137;
-          rf_speed = ((((message.data[2] << 0x08) + message.data[3]) - 10000) / 100.0) * 0.62137;
-          lr_speed = ((((message.data[4] << 0x08) + message.data[5]) - 10000) / 100.0) * 0.62137;
-          rr_speed = ((((message.data[6] << 0x08) + message.data[7]) - 10000) / 100.0) * 0.62137;
-          sprintf(wheel_speed_message, "%2d %2d %2d %2d", (int)lf_speed, (int)rf_speed, (int)lr_speed, (int)rr_speed);
-          set_cursor(0,3);
-          sLCD.print(wheel_speed_message);
-          break;
-
-        case MESSAGE_TEMPS:
-          coolant_temp = (message.data[0] - 40 + 32) * (9/5);
-          ambient_temp = (message.data[4] - 40 + 32) * (9/5);
-          sprintf(temps_message, "%3d,%2d", (int)coolant_temp, (int)ambient_temp);
-          set_cursor(14,3);
-          sLCD.print(temps_message);
-          break;
-
-        case MESSAGE_FLUID_LEVELS:
-          sprintf(fluid_levels_message, "Fl: 0x%x 0x%x", message.data[0], message.data[1]);
-          set_cursor(0,2);
-          sLCD.print(fluid_levels_message);
-          break;
-      }
-
-    }
+  if (last_wheel_speed_message.id > 0) {
+    float lf_speed = ((((last_wheel_speed_message.data[0] << 0x08) + last_wheel_speed_message.data[1]) - 10000) / 100.0) * 0.62137;
+    float rf_speed = ((((last_wheel_speed_message.data[2] << 0x08) + last_wheel_speed_message.data[3]) - 10000) / 100.0) * 0.62137;
+    float lr_speed = ((((last_wheel_speed_message.data[4] << 0x08) + last_wheel_speed_message.data[5]) - 10000) / 100.0) * 0.62137;
+    float rr_speed = ((((last_wheel_speed_message.data[6] << 0x08) + last_wheel_speed_message.data[7]) - 10000) / 100.0) * 0.62137;
+    char wheel_speed_message[20];
+    sprintf(wheel_speed_message, "%2d %2d %2d %2d", (int)lf_speed, (int)rf_speed, (int)lr_speed, (int)rr_speed);
+    set_cursor(0,3);
+    sLCD.print(wheel_speed_message);
   }
 
+  if (last_temps_message.id > 0) {
+    float coolant_temp = (last_temps_message.data[0] - 40 + 32) * (9/5);
+    float ambient_temp = (last_temps_message.data[4] - 40 + 32) * (9/5);
+    char temps_message[9];
+    sprintf(temps_message, "%3d,%2d", (int)coolant_temp, (int)ambient_temp);
+    set_cursor(14,3);
+    sLCD.print(temps_message);
+  }
+
+  if (last_fluids_message.id > 0) {
+    char fluid_levels_message[20];
+    sprintf(fluid_levels_message, "Fluids: 0x%02x 0x%02x", last_fluids_message.data[0], last_fluids_message.data[1]);
+    set_cursor(0,2);
+    sLCD.print(fluid_levels_message);
+  }
+
+  if (last_brakes_message.id > 0) {
+    char brakes_message[10];
+    float brake_application = (((last_brakes_message.data[0] << 0x08) + last_brakes_message.data[1]) - 30000)/1500;
+    sprintf(brakes_message, "%3d%% brk", (int) brake_application);
+    set_cursor(0,1);
+    sLCD.print(brakes_message);
+  }
+
+  if (last_engine_message.id > 0) {
+    char rpm_message[10];
+    char mph_message[10];
+    float mph = (((last_engine_message.data[4] << 0x08) + last_engine_message.data[5])/100.0) * 0.62137;
+    char throttle_message[10];
+    sprintf(rpm_message, "%4d rpm", (int) (last_engine_message.data[0] << 0x08) + last_engine_message.data[1]);
+    sprintf(mph_message, "%3d mph", (int) mph);
+    sprintf(throttle_message, "%3d%% thr", (int)last_engine_message.data[6]/2);
+    set_cursor(12,0);
+    sLCD.print(rpm_message);
+    set_cursor(13,1);
+    sLCD.print(mph_message);
+    set_cursor(0,0);
+    sLCD.print(throttle_message);
+  }
 }

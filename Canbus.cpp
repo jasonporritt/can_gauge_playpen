@@ -26,8 +26,8 @@ const prog_uint8_t gauge_filter[] PROGMEM =
 	
 	// Group 1
 	MCP2515_FILTER(MESSAGE_FLUID_LEVELS),		// Filter 2
-	MCP2515_FILTER(0xffff),		// Filter 3
-	MCP2515_FILTER(0xffff),		// Filter 4
+	MCP2515_FILTER(MESSAGE_ENGINE),		// Filter 3
+	MCP2515_FILTER(MESSAGE_BRAKES),		// Filter 4
 	MCP2515_FILTER(0xffff),		// Filter 5
 	
 	MCP2515_FILTER(0x0fff),				// Mask 0 (for group 0)
