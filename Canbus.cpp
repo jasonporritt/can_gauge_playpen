@@ -22,13 +22,13 @@ const prog_uint8_t gauge_filter[] PROGMEM =
 {
 	// Group 0
 	MCP2515_FILTER(MESSAGE_WHEEL_SPEED),				// Filter 0
-	MCP2515_FILTER(MESSAGE_TEMPS),      				// Filter 1
+	MCP2515_FILTER(MESSAGE_STEERING),      				// Filter 1
 	
 	// Group 1
-	MCP2515_FILTER(MESSAGE_FLUID_LEVELS),		// Filter 2
+	MCP2515_FILTER(MESSAGE_ENGINE_PARAMS),		// Filter 2
 	MCP2515_FILTER(MESSAGE_ENGINE),		// Filter 3
 	MCP2515_FILTER(MESSAGE_BRAKES),		// Filter 4
-	MCP2515_FILTER(MESSAGE_ENGINE_PARAMS),		// Filter 5
+	MCP2515_FILTER(MESSAGE_LOAD),		// Filter 5
 	
 	MCP2515_FILTER(0x0fff),				// Mask 0 (for group 0)
 	MCP2515_FILTER(0x0fff),		// Mask 1 (for group 1)

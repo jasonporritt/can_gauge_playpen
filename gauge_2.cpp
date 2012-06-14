@@ -1,14 +1,3 @@
-/* Welcome to the ECU Reader project. This sketch uses the Canbus library.
-It requires the CAN-bus shield for the Arduino. This shield contains the MCP2515 CAN controller and the MCP2551 CAN-bus driver.
-A connector for an EM406 GPS receiver and an uSDcard holder with 3v level convertor for use in data logging applications.
-The output data can be displayed on a serial LCD.
-
-SK Pang Electronics www.skpang.co.uk
-
-v1.0 28-03-10
-
-*/
-
 #include "WProgram.h"
 #include <Canbus.h>
 #include <NewSoftSerial.h>
@@ -40,6 +29,8 @@ tCAN last_temps_message;
 tCAN last_engine_message;
 tCAN last_brakes_message;
 tCAN last_engine_params_message;
+tCAN last_steering_message;
+tCAN last_load_message;
 void storeMessage(void) {
   tCAN message;
   if (Canbus.full_message_rx(&message)) {
@@ -61,6 +52,12 @@ void storeMessage(void) {
         break;
       case MESSAGE_BRAKES:
         last_brakes_message = message;
+        break;
+      case MESSAGE_STEERING:
+        last_steering_message = message;
+        break;
+      case MESSAGE_LOAD:
+        last_load_message = message;
         break;
     }
   }
@@ -101,29 +98,33 @@ void setup() {
 
 volatile int toggle = 0;
 void simulate(void) {
-  if (toggle % 6 == 0) {
+  if (toggle % 7 == 0) {
     uint8_t data[8] = { 0x47, 0x10, 0x47, 0x10, 0x47, 0x10, 0x47, 0x10 };
     Canbus.message_tx(MESSAGE_WHEEL_SPEED, data);
   }
-  else if (toggle % 6 == 1) {
+  else if (toggle % 7 == 1) {
     uint8_t data[8] = { 0x20, 0x00, 0x9, 0x00, 0x30, 0xf1, 0x1, 0x2 };
     Canbus.message_tx(MESSAGE_TEMPS, data);
   }
-  else if (toggle % 6 == 2) {
+  else if (toggle % 7 == 2) {
     uint8_t data[8] = { 0x20, 0x00, 0x9, 0x00, 0x30, 0xf1, 0x1, 0x2 };
     Canbus.message_tx(MESSAGE_FLUID_LEVELS, data);
   }
-  else if (toggle % 6 == 3) {
+  else if (toggle % 7 == 3) {
     uint8_t data[8] = { 0x10, 0x40, 0x9, 0x00, 0x27, 0x10, 0x1, 0x2 };
     Canbus.message_tx(MESSAGE_ENGINE, data);
   }
-  else if (toggle % 6 == 4) {
-    uint8_t data[8] = { 0x10, 0x75, 0x30, 0x00, 0x27, 0x10, 0x1, 0x2 };
+  else if (toggle % 7 == 4) {
+    uint8_t data[8] = { 0x78, 0x30, 0x30, 0x00, 0x27, 0x10, 0x1, 0x2 };
     Canbus.message_tx(MESSAGE_BRAKES, data);
   }
-  else if (toggle % 6 == 5) {
+  else if (toggle % 7 == 5) {
     uint8_t data[8] = { 0x27, 0x01, 0x27, 0x22, 0x26, 0xef, 0x80, 0x72 };
     Canbus.message_tx(MESSAGE_ENGINE_PARAMS, data);
+  }
+  else if (toggle % 7 == 6) {
+    uint8_t data[8] = { 0x29, 0x30, 0x27, 0x22, 0x26, 0xef, 0x80, 0x72 };
+    Canbus.message_tx(MESSAGE_STEERING, data);
   }
   toggle++;
   delay(1);
@@ -135,18 +136,28 @@ void loop() {
   // simulate();
   
   if (last_engine_params_message.id > 0) {
-    int maf  = ((last_engine_params_message.data[0] << 0x8) + last_engine_params_message.data[1]) - 10000;
-    int map1 = ((last_engine_params_message.data[2] << 0x8) + last_engine_params_message.data[3]) - 10000;
-    int map2 = ((last_engine_params_message.data[4] << 0x8) + last_engine_params_message.data[5]) - 10000;
-    int steering_angle = ((((last_engine_params_message.data[6] << 0x8) + last_engine_params_message.data[7]) - 32767) - 1) / 10;
+    float map  = ((((last_engine_params_message.data[0] << 0x8) + last_engine_params_message.data[1]) - 10000) * .0525) - 7.25;
     char engine_params_message[16];
-    sprintf(engine_params_message, "F:%+04d 1:%+04d 2:%+04d", maf, map1, map2); 
+    sprintf(engine_params_message, "MAP: %+ 2d psi", (int)map);
     set_cursor(0,2);
     sLCD.print(engine_params_message);
+  }
+
+  // if (last_load_message.id > 0) {
+  //   int load = ((last_load_message.data[4] << 0x8) + last_load_message.data[5]) / 100;
+  //   char load_message[10];
+  //   sprintf(load_message, "Load: %03d", load);
+  //   set_cursor(0,2);
+  //   sLCD.print(load_message);
+  // }
+
+  if (last_steering_message.id > 0) {
+    int steering_angle = (((last_steering_message.data[0] << 0x8) + last_steering_message.data[1]) - 10000) / 10;
     char steering_message[12];
     sprintf(steering_message, "St: %+3d", steering_angle);
     set_cursor(0,3);
     sLCD.print(steering_message);
+    sLCD.print((char)223);
   }
 
   // if (last_wheel_speed_message.id > 0) {
@@ -167,17 +178,17 @@ void loop() {
   //   sLCD.print(fluid_levels_message);
   // }
 
-  if (last_temps_message.id > 0) {
-    float ambient_temp = (last_temps_message.data[0] - 40 + 32) * (9/5);
-    char temps_message[9];
-    sprintf(temps_message, "%3dF", (int)ambient_temp);
-    set_cursor(17,3);
-    sLCD.print(temps_message);
-  }
+  // if (last_temps_message.id > 0) {
+  //   float ambient_temp = (last_temps_message.data[0] - 40 + 32) * (9/5);
+  //   char temps_message[9];
+  //   sprintf(temps_message, "%3dF", (int)ambient_temp);
+  //   set_cursor(17,3);
+  //   sLCD.print(temps_message);
+  // }
 
   if (last_brakes_message.id > 0) {
     char brakes_message[10];
-    float brake_application = (((last_brakes_message.data[0] << 0x08) + last_brakes_message.data[1]) - 30000)/1500;
+    float brake_application = (((last_brakes_message.data[0] << 0x08) + last_brakes_message.data[1]) - 30000)/100;
     sprintf(brakes_message, "%3d%% brk", (int) brake_application);
     set_cursor(0,1);
     sLCD.print(brakes_message);
