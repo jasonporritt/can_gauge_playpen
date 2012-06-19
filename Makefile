@@ -1,6 +1,8 @@
 ARDUINO_DIR = /Applications/Arduino.app/Contents/Resources/Java
 
 TARGET 								= gauge_2
+ARDUINO_LIBS    			= SoftwareSerial
+
 MCU    								= atmega328p
 F_CPU  								= 16000000
 ARDUINO_PORT 					= /dev/tty.usbmodemfd131

@@ -5,4 +5,4 @@
 #define MESSAGE_FLUID_LEVELS  0x430
 #define MESSAGE_BRAKES        0x20f
 #define MESSAGE_STEERING      0x80
-#define MESSAGE_LOAD          0x90
+#define MESSAGE_DYNAMICS      0x90

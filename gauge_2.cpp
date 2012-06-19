@@ -1,26 +1,29 @@
-#include "WProgram.h"
-#include <Canbus.h>
-#include <NewSoftSerial.h>
+#include "Arduino.h"
+#include "SoftwareSerial.h"
 #include <watch.h>
 #include "defaults.h"
+#include <Canbus.h>
 
 int LED2 = 8;
 int LED3 = 7;
 
 /* Serial LCD is connected on pin 14 (Analog input 0) */
+#define lcdRxPin 3
+#define lcdTxPin 6
 #define COMMAND 0xFE
 #define CLEAR   0x01
-NewSoftSerial sLCD =  NewSoftSerial(3, 6); 
+
+SoftwareSerial sLCD(lcdRxPin, lcdTxPin);
 
 void clear_lcd(void)
 {
-  sLCD.print(COMMAND,BYTE);
-  sLCD.print(CLEAR,BYTE);
+  sLCD.write(COMMAND);
+  sLCD.write(CLEAR);
 }
 void set_cursor(int xpos, int ypos){  
   uint8_t row_start[] = {0, 64, 20, 84};
-  sLCD.print(254, BYTE);
-  sLCD.print(row_start[ypos] + xpos + 128, BYTE);               
+  sLCD.write(254);
+  sLCD.write(row_start[ypos] + xpos + 128);               
 } 
 
 tCAN last_wheel_speed_message;
@@ -30,7 +33,7 @@ tCAN last_engine_message;
 tCAN last_brakes_message;
 tCAN last_engine_params_message;
 tCAN last_steering_message;
-tCAN last_load_message;
+tCAN last_dynamics_message;
 void storeMessage(void) {
   tCAN message;
   if (Canbus.full_message_rx(&message)) {
@@ -56,8 +59,8 @@ void storeMessage(void) {
       case MESSAGE_STEERING:
         last_steering_message = message;
         break;
-      case MESSAGE_LOAD:
-        last_load_message = message;
+      case MESSAGE_DYNAMICS:
+        last_dynamics_message = message;
         break;
     }
   }
@@ -135,21 +138,21 @@ void loop() {
   
   // simulate();
   
-  if (last_engine_params_message.id > 0) {
-    float map  = ((((last_engine_params_message.data[0] << 0x8) + last_engine_params_message.data[1]) - 10000) * .0525) - 7.25;
-    char engine_params_message[16];
-    sprintf(engine_params_message, "MAP: %+ 2d psi", (int)map);
-    set_cursor(0,2);
-    sLCD.print(engine_params_message);
-  }
-
-  // if (last_load_message.id > 0) {
-  //   int load = ((last_load_message.data[4] << 0x8) + last_load_message.data[5]) / 100;
-  //   char load_message[10];
-  //   sprintf(load_message, "Load: %03d", load);
+  // if (last_engine_params_message.id > 0) {
+  //   float map  = ((((last_engine_params_message.data[0] << 0x8) + last_engine_params_message.data[1]) - 10000) * .0525) - 7.25;
+  //   char engine_params_message[16];
+  //   sprintf(engine_params_message, "MAP: %+ 2d psi", (int)map);
   //   set_cursor(0,2);
-  //   sLCD.print(load_message);
+  //   sLCD.print(engine_params_message);
   // }
+
+  if (last_dynamics_message.id > 0) {
+    int yaw_rate = ((last_dynamics_message.data[4] << 0x8) + last_dynamics_message.data[5]) / 100;
+    char yaw_message[10];
+    sprintf(yaw_message, "Yaw: %03d", yaw_rate);
+    set_cursor(0,2);
+    sLCD.print(yaw_message);
+  }
 
   if (last_steering_message.id > 0) {
     int steering_angle = (((last_steering_message.data[0] << 0x8) + last_steering_message.data[1]) - 10000) / 10;
@@ -160,16 +163,16 @@ void loop() {
     sLCD.print((char)223);
   }
 
-  // if (last_wheel_speed_message.id > 0) {
-  //   float lf_speed = ((((last_wheel_speed_message.data[0] << 0x08) + last_wheel_speed_message.data[1]) - 10000) / 100.0) * 0.62137;
-  //   float rf_speed = ((((last_wheel_speed_message.data[2] << 0x08) + last_wheel_speed_message.data[3]) - 10000) / 100.0) * 0.62137;
-  //   float lr_speed = ((((last_wheel_speed_message.data[4] << 0x08) + last_wheel_speed_message.data[5]) - 10000) / 100.0) * 0.62137;
-  //   float rr_speed = ((((last_wheel_speed_message.data[6] << 0x08) + last_wheel_speed_message.data[7]) - 10000) / 100.0) * 0.62137;
-  //   char wheel_speed_message[20];
-  //   sprintf(wheel_speed_message, "%2d %2d %2d %2d", (int)lf_speed, (int)rf_speed, (int)lr_speed, (int)rr_speed);
-  //   set_cursor(0,3);
-  //   sLCD.print(wheel_speed_message);
-  // }
+  if (last_wheel_speed_message.id > 0) {
+    float lf_speed = ((((last_wheel_speed_message.data[0] << 0x08) + last_wheel_speed_message.data[1]) - 10000) / 100.0) * 0.62137;
+    float rf_speed = ((((last_wheel_speed_message.data[2] << 0x08) + last_wheel_speed_message.data[3]) - 10000) / 100.0) * 0.62137;
+    float lr_speed = ((((last_wheel_speed_message.data[4] << 0x08) + last_wheel_speed_message.data[5]) - 10000) / 100.0) * 0.62137;
+    float rr_speed = ((((last_wheel_speed_message.data[6] << 0x08) + last_wheel_speed_message.data[7]) - 10000) / 100.0) * 0.62137;
+    char wheel_speed_message[20];
+    sprintf(wheel_speed_message, "%2d %2d %2d %2d", (int)lf_speed, (int)rf_speed, (int)lr_speed, (int)rr_speed);
+    set_cursor(0,0);
+    sLCD.print(wheel_speed_message);
+  }
 
   // if (last_fluids_message.id > 0) {
   //   char fluid_levels_message[20];
@@ -194,19 +197,19 @@ void loop() {
     sLCD.print(brakes_message);
   }
 
-  if (last_engine_message.id > 0) {
-    char rpm_message[10];
-    char mph_message[10];
-    float mph = (((last_engine_message.data[4] << 0x08) + last_engine_message.data[5])/100.0) * 0.62137;
-    char throttle_message[10];
-    sprintf(rpm_message, "%4d rpm", (int) (last_engine_message.data[0] << 0x08) + last_engine_message.data[1]);
-    sprintf(mph_message, "%3d mph", (int) mph);
-    sprintf(throttle_message, "%3d%% thr", (int)last_engine_message.data[6]/2);
-    set_cursor(12,0);
-    sLCD.print(rpm_message);
-    set_cursor(13,1);
-    sLCD.print(mph_message);
-    set_cursor(0,0);
-    sLCD.print(throttle_message);
-  }
+  // if (last_engine_message.id > 0) {
+  //   char rpm_message[10];
+  //   char mph_message[10];
+  //   float mph = (((last_engine_message.data[4] << 0x08) + last_engine_message.data[5])/100.0) * 0.62137;
+  //   char throttle_message[10];
+  //   sprintf(rpm_message, "%4d rpm", (int) (last_engine_message.data[0] << 0x08) + last_engine_message.data[1]);
+  //   sprintf(mph_message, "%3d mph", (int) mph);
+  //   sprintf(throttle_message, "%3d%% thr", (int)last_engine_message.data[6]/2);
+  //   set_cursor(12,0);
+  //   sLCD.print(rpm_message);
+  //   set_cursor(13,1);
+  //   sLCD.print(mph_message);
+  //   set_cursor(0,0);
+  //   sLCD.print(throttle_message);
+  // }
 }
