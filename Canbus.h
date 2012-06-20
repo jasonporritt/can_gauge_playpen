@@ -36,16 +36,9 @@ class CanbusClass
   char init(unsigned char);
 	char message_tx(uint16_t id, uint8_t data[]);
 	char message_rx(unsigned char *buffer);
-	char full_message_rx(tCAN *message);
-	char ecu_req(unsigned char pid,  char *buffer);
+	char message_rx(tCAN *message);
 
-  void set_loopback_mode(void);
-  void set_standard_mode(void);
-  void set_configuration_mode(void);
-
-  void set_all_filters_open(void);
-  void set_gauge_filter(void);
-  void turn_on_filters(void);
+  void set_filters(const prog_uint8_t *filter);
 
   private:
 	

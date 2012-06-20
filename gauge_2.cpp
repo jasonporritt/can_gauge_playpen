@@ -4,14 +4,31 @@
 #include "defaults.h"
 #include <Canbus.h>
 
-int LED2 = 8;
-int LED3 = 7;
-
 /* Serial LCD is connected on pin 14 (Analog input 0) */
 #define lcdRxPin 3
 #define lcdTxPin 6
 #define COMMAND 0xFE
 #define CLEAR   0x01
+
+// Filter set based on watch.h indicated message
+const prog_uint8_t gauge_filter[] PROGMEM = 
+{
+	// Group 0
+	MCP2515_FILTER(MESSAGE_WHEEL_SPEED),				// Filter 0
+	MCP2515_FILTER(MESSAGE_STEERING),      				// Filter 1
+	
+	// Group 1
+	MCP2515_FILTER(MESSAGE_ENGINE_PARAMS),		// Filter 2
+	MCP2515_FILTER(MESSAGE_ENGINE),		// Filter 3
+	MCP2515_FILTER(MESSAGE_BRAKES),		// Filter 4
+	MCP2515_FILTER(MESSAGE_DYNAMICS),		// Filter 5
+	
+	MCP2515_FILTER(0x0fff),				// Mask 0 (for group 0)
+	MCP2515_FILTER(0x0fff),		// Mask 1 (for group 1)
+};
+
+int LED2 = 8;
+int LED3 = 7;
 
 SoftwareSerial sLCD(lcdRxPin, lcdTxPin);
 
@@ -36,7 +53,7 @@ tCAN last_steering_message;
 tCAN last_dynamics_message;
 void storeMessage(void) {
   tCAN message;
-  if (Canbus.full_message_rx(&message)) {
+  if (Canbus.message_rx(&message)) {
     switch (message.id) {
       case MESSAGE_ENGINE_PARAMS:
         last_engine_params_message = message;
@@ -82,7 +99,7 @@ void setup() {
     Serial.println("CAN Init ok");
     clear_lcd();
     sLCD.print("CAN Init ok");
-    Canbus.set_gauge_filter();
+    Canbus.set_filters(gauge_filter);
   } else
   {
     Serial.println("Can't init CAN");

@@ -33,13 +33,12 @@
 
 #include "mcp2515_defs.h"
 #include "global.h"
-#ifdef __cplusplus
 
+#ifdef __cplusplus
 extern "C"
 {
-	
-
 #endif
+
 // ----------------------------------------------------------------------------
 typedef struct
 {
@@ -67,8 +66,15 @@ void mcp2515_bit_modify(uint8_t adress, uint8_t mask, uint8_t data);
 uint8_t mcp2515_read_status(uint8_t type);
 
 // ----------------------------------------------------------------------------
-
 uint8_t mcp2515_init(uint8_t speed);
+
+// ----------------------------------------------------------------------------
+void mcp2515_set_standard_mode(void);
+void mcp2515_set_loopback_mode(void);
+void mcp2515_set_configuration_mode(void);
+void mcp2515_turn_on_filters(void);
+void mcp2515_turn_off_filters(void);
+void mcp2515_static_filter(const uint8_t *filter);
 
 // ----------------------------------------------------------------------------
 // check if there are any new messages waiting
@@ -83,8 +89,6 @@ uint8_t mcp2515_get_message(tCAN *message);
 
 // ----------------------------------------------------------------------------
 uint8_t mcp2515_send_message(tCAN *message);
-
-void mcp2515_static_filter(const uint8_t *filter);
 
 #ifdef __cplusplus
 }

@@ -33,19 +33,14 @@
 #include "global.h"
 #include "mcp2515.h"
 #include "mcp2515_defs.h"
-
-
 #include "defaults.h"
-
-// -------------------------------------------------------------------------
-// Schreibt/liest ein Byte ueber den Hardware SPI Bus
 
 uint8_t spi_putc( uint8_t data )
 {
 	// put byte in send-buffer
 	SPDR = data;
 	
-	// wait until byte was send
+	// wait until byte was sent
 	while( !( SPSR & (1<<SPIF) ) )
 		;
 	
@@ -68,16 +63,13 @@ void mcp2515_write_register( uint8_t adress, uint8_t data )
 uint8_t mcp2515_read_register(uint8_t adress)
 {
 	uint8_t data;
-	
 	RESET(MCP2515_CS);
 	
 	spi_putc(SPI_READ);
 	spi_putc(adress);
-	
 	data = spi_putc(0xff);	
 	
 	SET(MCP2515_CS);
-	
 	return data;
 }
 
@@ -98,22 +90,18 @@ void mcp2515_bit_modify(uint8_t adress, uint8_t mask, uint8_t data)
 uint8_t mcp2515_read_status(uint8_t type)
 {
 	uint8_t data;
-	
 	RESET(MCP2515_CS);
 	
 	spi_putc(type);
 	data = spi_putc(0xff);
 	
 	SET(MCP2515_CS);
-	
 	return data;
 }
 
 // -------------------------------------------------------------------------
 uint8_t mcp2515_init(uint8_t speed)
 {
-		
-	
 	SET(MCP2515_CS);
 	SET_OUTPUT(MCP2515_CS);
 	
@@ -145,20 +133,11 @@ uint8_t mcp2515_init(uint8_t speed)
 	RESET(MCP2515_CS);
 	spi_putc(SPI_WRITE);
 	spi_putc(CNF3);
-	
-/*	spi_putc((1<<PHSEG21));		// Bitrate 125 kbps at 16 MHz
+
+  // Bitrate 250 kbps at 16 MHz. (is this SPI speed??)
+	spi_putc((1<<PHSEG21));
 	spi_putc((1<<BTLMODE)|(1<<PHSEG11));
-	spi_putc((1<<BRP2)|(1<<BRP1)|(1<<BRP0));
-*/
-/*	
-	spi_putc((1<<PHSEG21));		// Bitrate 250 kbps at 16 MHz
-	spi_putc((1<<BTLMODE)|(1<<PHSEG11));
-	spi_putc((1<<BRP1)|(1<<BRP0));
-*/	
-	spi_putc((1<<PHSEG21));		// Bitrate 250 kbps at 16 MHz
-	spi_putc((1<<BTLMODE)|(1<<PHSEG11));
-	//spi_putc(1<<BRP0);
-    spi_putc(speed);
+  spi_putc(speed);
 
 	// activate interrupts
 	spi_putc((1<<RX1IE)|(1<<RX0IE));
@@ -187,19 +166,41 @@ uint8_t mcp2515_init(uint8_t speed)
 	return true;
 }
 
-// -----------------------------------------
-// Taken from can-lib source
-// -----------------------------------------
 
-void mcp2515_static_filter(const prog_uint8_t *filter)
-{
-	// change to configuration mode
+// -------------------------------------------------------------------------
+void mcp2515_set_standard_mode(void) {
+  mcp2515_bit_modify(CANCTRL, (1<<REQOP2)|(1<<REQOP1)|(1<<REQOP0), 0);
+}
+
+// -------------------------------------------------------------------------
+void mcp2515_set_loopback_mode(void) {
+  mcp2515_bit_modify(CANCTRL, (1<<REQOP2)|(1<<REQOP1)|(1<<REQOP0), 0x40);
+}
+
+// -------------------------------------------------------------------------
+void mcp2515_set_configuration_mode(void) {
 	mcp2515_bit_modify(CANCTRL, 0xe0, (1<<REQOP2));
 	while ((mcp2515_read_register(CANSTAT) & 0xe0) != (1<<REQOP2))
 		;
-	
+}
+
+// -------------------------------------------------------------------------
+void mcp2515_turn_on_filters(void) {
 	mcp2515_write_register(RXB0CTRL, (1<<BUKT));
 	mcp2515_write_register(RXB1CTRL, 0);
+}
+
+// -------------------------------------------------------------------------
+void mcp2515_turn_off_filters(void) {
+	mcp2515_write_register(RXB0CTRL, (1<<RXM1)|(1<<RXM0));
+	mcp2515_write_register(RXB1CTRL, (1<<RXM1)|(1<<RXM0));
+}
+
+// -------------------------------------------------------------------------
+void mcp2515_static_filter(const prog_uint8_t *filter)
+{
+	mcp2515_set_configuration_mode();
+  mcp2515_turn_on_filters();
     
 	uint8_t i, j;
 	for (i = 0; i < 0x30; i += 0x10)
@@ -218,15 +219,8 @@ void mcp2515_static_filter(const prog_uint8_t *filter)
 		SET(MCP2515_CS);
 	}
 	
-  mcp2515_bit_modify(CANCTRL, (1<<REQOP2)|(1<<REQOP1)|(1<<REQOP0), 0);
+  mcp2515_set_standard_mode();
 }
-// -----------------------------------------
-// END stuff taken from can-lib source
-// -----------------------------------------
-
-
-
-
 
 // ----------------------------------------------------------------------------
 // check if there are any new messages waiting
