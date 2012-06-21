@@ -10,7 +10,6 @@ This depends on my version of the Canbus library hosted here on GitHub (NewCanbu
 
 ## The Hardware
 
-The hardware:
   * An Arduino Uno
   * [The CAN bus shield sold by SparkFun](http://www.sparkfun.com/products/10039)
   * [A serial-enabled 20x4 LCD](http://www.sparkfun.com/products/9568)
