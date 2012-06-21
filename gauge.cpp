@@ -3,7 +3,7 @@
 #include <watch.h>
 #include "defaults.h"
 #include <mcp2515.h>
-#include <PCanbus.h>
+#include <NewCanbus.h>
 
 /* Serial LCD is connected on pin 14 (Analog input 0) */
 #define lcdRxPin 3
@@ -54,7 +54,7 @@ tCAN last_steering_message;
 tCAN last_dynamics_message;
 void storeMessage(void) {
   tCAN message;
-  if (PCanbus.message_rx(&message)) {
+  if (NewCanbus.message_rx(&message)) {
     switch (message.id) {
       case MESSAGE_ENGINE_PARAMS:
         last_engine_params_message = message;
@@ -95,12 +95,12 @@ void setup() {
 
   sLCD.begin(9600);
   
-  if(PCanbus.init(CANSPEED_500))
+  if(NewCanbus.init(CANSPEED_500))
   {
     Serial.println("CAN Init ok");
     clear_lcd();
     sLCD.print("CAN Init ok");
-    PCanbus.set_filters(gauge_filter);
+    NewCanbus.set_filters(gauge_filter);
   } else
   {
     Serial.println("Can't init CAN");
@@ -109,7 +109,7 @@ void setup() {
 
   attachInterrupt(0, storeMessage, LOW);
 
-  // PCanbus.set_loopback_mode();
+  // NewCanbus.set_loopback_mode();
  
   delay(1000);
   clear_lcd();
@@ -121,31 +121,31 @@ volatile int toggle = 0;
 void simulate(void) {
   if (toggle % 7 == 0) {
     uint8_t data[8] = { 0x47, 0x10, 0x47, 0x10, 0x47, 0x10, 0x47, 0x10 };
-    PCanbus.message_tx(MESSAGE_WHEEL_SPEED, data);
+    NewCanbus.message_tx(MESSAGE_WHEEL_SPEED, data);
   }
   else if (toggle % 7 == 1) {
     uint8_t data[8] = { 0x20, 0x00, 0x9, 0x00, 0x30, 0xf1, 0x1, 0x2 };
-    PCanbus.message_tx(MESSAGE_TEMPS, data);
+    NewCanbus.message_tx(MESSAGE_TEMPS, data);
   }
   else if (toggle % 7 == 2) {
     uint8_t data[8] = { 0x20, 0x00, 0x9, 0x00, 0x30, 0xf1, 0x1, 0x2 };
-    PCanbus.message_tx(MESSAGE_FLUID_LEVELS, data);
+    NewCanbus.message_tx(MESSAGE_FLUID_LEVELS, data);
   }
   else if (toggle % 7 == 3) {
     uint8_t data[8] = { 0x10, 0x40, 0x9, 0x00, 0x27, 0x10, 0x1, 0x2 };
-    PCanbus.message_tx(MESSAGE_ENGINE, data);
+    NewCanbus.message_tx(MESSAGE_ENGINE, data);
   }
   else if (toggle % 7 == 4) {
     uint8_t data[8] = { 0x78, 0x30, 0x30, 0x00, 0x27, 0x10, 0x1, 0x2 };
-    PCanbus.message_tx(MESSAGE_BRAKES, data);
+    NewCanbus.message_tx(MESSAGE_BRAKES, data);
   }
   else if (toggle % 7 == 5) {
     uint8_t data[8] = { 0x27, 0x01, 0x27, 0x22, 0x26, 0xef, 0x80, 0x72 };
-    PCanbus.message_tx(MESSAGE_ENGINE_PARAMS, data);
+    NewCanbus.message_tx(MESSAGE_ENGINE_PARAMS, data);
   }
   else if (toggle % 7 == 6) {
     uint8_t data[8] = { 0x29, 0x30, 0x27, 0x22, 0x26, 0xef, 0x80, 0x72 };
-    PCanbus.message_tx(MESSAGE_STEERING, data);
+    NewCanbus.message_tx(MESSAGE_STEERING, data);
   }
   toggle++;
   delay(1);
