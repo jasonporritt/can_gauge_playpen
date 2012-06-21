@@ -8,4 +8,4 @@ F_CPU  								= 16000000
 ARDUINO_PORT 					= /dev/tty.usbmodemfd131
 AVRDUDE_ARD_BAUDRATE 	= 115200
 
-include ../Arduino.mk
+include Arduino.mk
