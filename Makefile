@@ -1,7 +1,7 @@
 ARDUINO_DIR = /Applications/Arduino.app/Contents/Resources/Java
 
 TARGET 								= gauge_2
-ARDUINO_LIBS    			= SoftwareSerial
+ARDUINO_LIBS    			= SoftwareSerial PCanbus 
 
 MCU    								= atmega328p
 F_CPU  								= 16000000
